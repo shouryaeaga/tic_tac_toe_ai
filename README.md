@@ -1,1 +1,2 @@
-A tic tac toe game with an ai that can currently only evaluate positions and moves with a minimax algorithm. Soon it will be able to automatically make moves.
+A tic tac toe game with an ai that can currently evaluate positions and moves with a minimax algorithm.
+The code is a bit messy and needs refactoring but overall works well.
