@@ -5,6 +5,7 @@
 #pragma once
 #include <array>
 #include <string>
+#include <variant>
 
 class Game {
 public:
@@ -30,6 +31,8 @@ private:
         INCOMPLETE = 3
     };
 
+    using ComputerResult = std::variant<Turn, Winner>;
+
     Winner getWinner(std::array<std::array<std::string, 3>, 3> &board);
     Winner getWinner() {
         return getWinner(board);
@@ -37,9 +40,9 @@ private:
 
     Turn getPlayerTurn();
     void printBoard();
-    Turn makeComputerTurn(int depth, bool maximisingPlayer1);
+    Turn makeComputerTurn(bool maximisingPlayer1);
 
-    Winner makeComputerTurnHelper(std::array<std::array<std::string, 3>, 3> board, int depth, bool maximisingPlayer1);
+    Game::ComputerResult makeComputerTurnHelper(std::array<std::array<std::string, 3>, 3> board, bool maximisingPlayer1, bool firstRecursion);
 
     bool updateBoard(Turn move, std::array<std::array<std::string,3>,3>& board);
     bool updateBoard(Turn move) {

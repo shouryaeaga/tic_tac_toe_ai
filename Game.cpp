@@ -60,11 +60,13 @@ void Game::Loop() {
 
         printBoard();
 
-        makeComputerTurn(9, false);
+        Turn player2Turn;
+        if (ai) {
+            player2Turn = makeComputerTurn(false);
+        } else {
+            player2Turn = getPlayerTurn();
+        }
 
-        // TODO: make ai move the pieces
-
-        Turn player2Turn = getPlayerTurn();
         player2Turn.player1 = false;
 
 
@@ -87,8 +89,6 @@ void Game::Loop() {
             std::cout << "Draw\n";
             break;
         }
-
-        makeComputerTurn(9, true);
 
         printBoard();
     }
@@ -150,19 +150,16 @@ void Game::printBoard() {
 
 }
 
-Game::Turn Game::makeComputerTurn(const int depth, const bool maximisingPlayer1) {
-    makeComputerTurnHelper(board, depth, maximisingPlayer1);
-    Turn turn {
-        1,
-        1,
-        true
-    };
-    return turn;
+Game::Turn Game::makeComputerTurn(const bool maximisingPlayer1) {
+    ComputerResult result = makeComputerTurnHelper(board, maximisingPlayer1, true);
+    if (std::holds_alternative<Turn>(result)) {
+        return std::get<Turn>(result);
+    }
 }
 
-Game::Winner Game::makeComputerTurnHelper(std::array<std::array<std::string, 3>, 3> board, const int depth, bool maximisingPlayer1) {
+Game::ComputerResult Game::makeComputerTurnHelper(std::array<std::array<std::string, 3>, 3> board, bool maximisingPlayer1, bool firstRecursion) {
     // If depth is 0, or game is over, return the evaluation of position
-    if (depth == 0 || getWinner(board) != INCOMPLETE) {
+    if (getWinner(board) != INCOMPLETE) {
         return getWinner(board);
     }
 
@@ -177,6 +174,7 @@ Game::Winner Game::makeComputerTurnHelper(std::array<std::array<std::string, 3>,
     }
 
     std::vector<Winner> evals;
+    std::vector<Turn> turns;
 
     // Now recursively call each one
     for (int i = 0; i < possibleMoves.size(); i++) {
@@ -187,16 +185,11 @@ Game::Winner Game::makeComputerTurnHelper(std::array<std::array<std::string, 3>,
         };
         std::array<std::array<std::string,3>,3> newBoard = board;
         updateBoard(nextTurn, newBoard);
-        Winner eval = makeComputerTurnHelper(newBoard, depth-1, !maximisingPlayer1);
-        evals.push_back(eval);
-    }
+        ComputerResult eval = makeComputerTurnHelper(newBoard, !maximisingPlayer1, false);
+        if (std::holds_alternative<Winner>(eval))
+            evals.push_back(std::get<Winner>(eval));
 
-    // print out all the evals
-    if (depth == 9) {
-        for (int i = 0; i < evals.size(); i++) {
-            std::cout << "For move (" << possibleMoves[i][0] << ", " << possibleMoves[i][1] << "):\n";
-            std::cout << evals[i] << "\n";
-        }
+        turns.push_back(nextTurn);
     }
 
     // Return the best eval for the maximising player
@@ -205,22 +198,40 @@ Game::Winner Game::makeComputerTurnHelper(std::array<std::array<std::string, 3>,
         int wins = 0;
         int draws = 0;
         int losses = 0;
-        for (Winner eval : evals) {
-            if (eval == PLAYER1) {
+
+        // Make a vector of winning moves and drawing moves and losing moves
+        std::vector<Turn> winningTurns;
+        std::vector<Turn> drawingTurns;
+        std::vector<Turn> losingTurns;
+
+        for (int i = 0; i < evals.size(); i++) {
+            if (evals[i] == PLAYER1) {
                 wins += 1;
-            } else if (eval == DRAW) {
+                winningTurns.push_back(turns[i]);
+            } else if (evals[i] == DRAW) {
                 draws += 1;
-            } else if (eval == PLAYER2) {
+                drawingTurns.push_back(turns[i]);
+            } else if (evals[i] == PLAYER2) {
                 losses += 1;
+                losingTurns.push_back(turns[i]);
             }
         }
         if (wins > 0) {
+            if (firstRecursion) {
+                return winningTurns[0];
+            }
             return PLAYER1;
         }
         if (draws > 0) {
+            if (firstRecursion) {
+                return drawingTurns[0];
+            }
             return DRAW;
         }
         if (losses > 0) {
+            if (firstRecursion) {
+                return losingTurns[0];
+            }
             return PLAYER2;
         }
     } else {
@@ -228,22 +239,40 @@ Game::Winner Game::makeComputerTurnHelper(std::array<std::array<std::string, 3>,
         int wins = 0;
         int draws = 0;
         int losses = 0;
-        for (Winner eval : evals) {
-            if (eval == PLAYER1) {
-                losses += 1;
-            } else if (eval == DRAW) {
-                draws += 1;
-            } else if (eval == PLAYER2) {
+
+        // Make a vector of winning moves and drawing moves and losing moves
+        std::vector<Turn> winningTurns;
+        std::vector<Turn> drawingTurns;
+        std::vector<Turn> losingTurns;
+
+        for (int i = 0; i < evals.size(); i++) {
+            if (evals[i] == PLAYER2) {
                 wins += 1;
+                winningTurns.push_back(turns[i]);
+            } else if (evals[i] == DRAW) {
+                draws += 1;
+                drawingTurns.push_back(turns[i]);
+            } else if (evals[i] == PLAYER1) {
+                losses += 1;
+                losingTurns.push_back(turns[i]);
             }
         }
         if (wins > 0) {
+            if (firstRecursion) {
+                return winningTurns[0];
+            }
             return PLAYER2;
         }
         if (draws > 0) {
+            if (firstRecursion) {
+                return drawingTurns[0];
+            }
             return DRAW;
         }
         if (losses > 0) {
+            if (firstRecursion) {
+                return losingTurns[0];
+            }
             return PLAYER1;
         }
     }
