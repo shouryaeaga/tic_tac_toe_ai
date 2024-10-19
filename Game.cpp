@@ -11,86 +11,112 @@
 #include <utility>
 #include <vector>
 
-Game::Game() {
-    std::cout << "Welcome to Tic Tac Toe with AI\n";
-    bool initialised = false;
-    // Check if player wants ai or just 2 players
-    while (!initialised) {
-        std::cout << "Do you want to play against AI (Y/N)? ";
+bool inputValidation(std::string message) {
+    while (true) {
+        std::cout << message << "\n";
         std::string input;
         std::getline(std::cin, input);
         if (input == "Y" || input == "y") {
-            ai = true;
-            initialised = true;
+            return true;
         }
-        else if (input == "N" || input == "n") {
-            ai = false;
-            initialised = true;
+        if (input == "N" || input == "n") {
+            return false;
         }
-        else
-            std::cout << "Invalid Input\n";
+        std::cout << "Invalid input\n";
     }
 
 }
 
+Game::Game() {
+    srand(time(0));
+    std::cout << "Welcome to Tic Tac Toe with AI\n";
+    if (inputValidation("Do you want to play against AI (Y/N)? ")) {
+        ai_player = rand() % 2 == 0 ? AI_PLAYER_1 : AI_PLAYER_2;
+    } else {
+        ai_player = NOT_PLAYING;
+    }
+}
+
+Game::Winner Game::MakeTurn(bool player1, bool ai) {
+    Turn playerTurn;
+    if (ai) {
+        playerTurn = makeComputerTurn(player1);
+        playerTurn.player1 = player1;
+    } else {
+        playerTurn = getPlayerTurn();
+        playerTurn.player1 = player1;
+    }
+
+    while (!updateBoard(playerTurn)) {
+        std::cout << "Invalid move\n";
+        playerTurn = getPlayerTurn();
+        playerTurn.player1 = player1;
+    }
+
+    Winner winner = getWinner();
+
+    printBoard();
+
+    // CHECK WINNER
+    if (winner == PLAYER1) {
+        std::cout << "Player 1 wins\n";
+        return PLAYER1;
+    }
+    if (winner == DRAW) {
+        std::cout << "Draw\n";
+        return DRAW;
+    }
+    if (winner == PLAYER2) {
+        std::cout << "Player 2 wins\n";
+        return PLAYER2;
+    }
+    return INCOMPLETE;
+}
+
+void Game::cleanBoard() {
+    board = {
+        {
+            {PieceToString(EMPTY), PieceToString(EMPTY), PieceToString(EMPTY)},
+            {PieceToString(EMPTY), PieceToString(EMPTY), PieceToString(EMPTY)},
+            {PieceToString(EMPTY), PieceToString(EMPTY), PieceToString(EMPTY)}
+        }
+    };
+}
+
 void Game::Loop() {
     while (true) {
-        Turn player1Turn = getPlayerTurn();
-        player1Turn.player1 = true;
-
-        while (!updateBoard(player1Turn)) {
-            std::cout << "Invalid move\n";
-            player1Turn = getPlayerTurn();
-            player1Turn.player1 = true;
-        }
-
-        Winner winner = getWinner();
-
-        // CHECK WINNER
-        if (winner == Winner::PLAYER1) {
-            printBoard();
-            std::cout << "Player 1 wins\n";
-            break;
-        }
-        if (winner == Winner::DRAW) {
-            printBoard();
-            std::cout << "Draw\n";
-            break;
-        }
-
-        printBoard();
-
-        Turn player2Turn;
-        if (ai) {
-            player2Turn = makeComputerTurn(false);
-        } else {
-            player2Turn = getPlayerTurn();
-        }
-
-        player2Turn.player1 = false;
+        if (ai_player == AI_PLAYER_1)
+            std::cout << "AI is thinking....\n";
 
 
-        while (!updateBoard(player2Turn)) {
-            std::cout << "Invalid move\n";
-            player2Turn = getPlayerTurn();
-            player2Turn.player1 = false;
-        }
+        if (MakeTurn(true, ai_player == AI_PLAYER_1) != INCOMPLETE) {
+            if (inputValidation("Do you want to play again (Y/N)? ")) {
+                cleanBoard();
+                if (inputValidation("Do you want to play against AI (Y/N)? "))
+                    ai_player = rand() % 2 == 0 ? AI_PLAYER_1 : AI_PLAYER_2;
+                else
+                    ai_player = NOT_PLAYING;
 
-        winner = getWinner();
+            } else {
+                break;
+            }
+        };
 
-        // CHECK WINNER
-        if (winner == Winner::PLAYER2) {
-            printBoard();
-            std::cout << "Player 2 wins\n";
-            break;
-        }
-        if (winner == Winner::DRAW) {
-            printBoard();
-            std::cout << "Draw\n";
-            break;
-        }
+        if (ai_player == AI_PLAYER_2)
+            std::cout << "AI is thinking....\n";
 
-        printBoard();
+
+        if (MakeTurn(false, ai_player==AI_PLAYER_2) != INCOMPLETE) {
+            if (inputValidation("Do you want to play again (Y/N)? ")) {
+                cleanBoard();
+                if (inputValidation("Do you want to play against AI (Y/N)? "))
+                    ai_player = rand() % 2 == 0 ? AI_PLAYER_1 : AI_PLAYER_2;
+                else
+                    ai_player = NOT_PLAYING;
+            } else {
+                break;
+            }
+        };
     }
 }
 
@@ -152,9 +178,7 @@ void Game::printBoard() {
 
 Game::Turn Game::makeComputerTurn(const bool maximisingPlayer1) {
     ComputerResult result = makeComputerTurnHelper(board, maximisingPlayer1, true);
-    if (std::holds_alternative<Turn>(result)) {
-        return std::get<Turn>(result);
-    }
+    return std::get<Turn>(result);
 }
 
 Game::ComputerResult Game::makeComputerTurnHelper(std::array<std::array<std::string, 3>, 3> board, bool maximisingPlayer1, bool firstRecursion) {
@@ -167,7 +191,7 @@ Game::ComputerResult Game::makeComputerTurnHelper(std::array<std::array<std::str
     std::vector<std::array<int, 2>> possibleMoves;
     for (int i = 0; i < board.size(); i++) {
         for (int j = 0; j < board[0].size(); j++) {
-            if (board[i][j] == " ") {
+            if (board[i][j] == PieceToString(EMPTY)) {
                 possibleMoves.push_back({j+1, 3-i});
             }
         }
@@ -276,19 +300,18 @@ Game::ComputerResult Game::makeComputerTurnHelper(std::array<std::array<std::str
             return PLAYER1;
         }
     }
-    return INCOMPLETE;
 }
 
 bool Game::updateBoard(Turn move, std::array<std::array<std::string,3>,3>& board) {
     auto [x, y, player1] = move;
     // Update board
     // Check if the coordinates exist
-    if (board[3-y][x-1] == " ") {
+    if (board[3-y][x-1] == PieceToString(EMPTY)) {
         if (player1) {
-            board[3-y][x-1] = 'X';
+            board[3-y][x-1] = PieceToString(X);
             return true;
         }
-        board[3-y][x-1] = 'O';
+        board[3-y][x-1] = PieceToString(O);
         return true;
     }
     return false;
@@ -300,12 +323,12 @@ Game::Winner Game::getWinner(std::array<std::array<std::string, 3>, 3>& board) {
 
     // Check rows
     for (int i = 0; i < 3; i++) {
-        if (board[i][0] == board[i][1] && board[i][0] == board[i][2] && board[i][0] != " ") {
+        if (board[i][0] == board[i][1] && board[i][0] == board[i][2] && board[i][0] != PieceToString(EMPTY)) {
             // Update board to have dashes running through them
             winningCombinations[0] = {1, i+1};
             winningCombinations[1] = {2, i+1};
             winningCombinations[2] = {3, i+1};
-            if (board[i][0] == "X" || board[i][0] == "X̶")
+            if (board[i][0] == PieceToString(X) || board[i][0] == PieceToString(X_WIN))
                 winner = PLAYER1;
             else
                 winner = PLAYER2;
@@ -314,12 +337,12 @@ Game::Winner Game::getWinner(std::array<std::array<std::string, 3>, 3>& board) {
 
     // Check columns
     for (int i = 0; i < 3; i++) {
-        if (board[0][i] == board[1][i] && board[1][i] == board[2][i] && board[0][i] != " ") {
+        if (board[0][i] == board[1][i] && board[1][i] == board[2][i] && board[0][i] != PieceToString(EMPTY)) {
             winningCombinations[0] = {i+1, 1};
             winningCombinations[1] = {i+1, 2};
             winningCombinations[2] = {i+1, 3};
 
-            if (board[0][i] == "X" || board[0][i] == "X̶") {
+            if (board[0][i] == PieceToString(X) || board[0][i] == PieceToString(X_WIN)) {
                 winner = PLAYER1;
             } else {
                 winner = PLAYER2;
@@ -328,22 +351,22 @@ Game::Winner Game::getWinner(std::array<std::array<std::string, 3>, 3>& board) {
     }
 
     // Check diagonals top right and bottom right
-    if (board[0][0] == board[1][1] && board[1][1] == board[2][2] && board[0][0] != " ") {
+    if (board[0][0] == board[1][1] && board[1][1] == board[2][2] && board[0][0] != PieceToString(EMPTY)) {
         winningCombinations[0] = {1, 1};
         winningCombinations[1] = {2, 2};
         winningCombinations[2] = {3, 3};
-        if (board[0][0] == "X" || board[0][0] == "X̶")
+        if (board[0][0] == PieceToString(X) || board[0][0] == PieceToString(X_WIN))
             winner = PLAYER1;
         else {
             winner = PLAYER2;
         }
     }
 
-    if (board[2][0] == board[1][1] && board[2][0] == board[0][2] && board[2][0] != " ") {
+    if (board[2][0] == board[1][1] && board[2][0] == board[0][2] && board[2][0] != PieceToString(EMPTY)) {
         winningCombinations[0] = {1, 3};
         winningCombinations[1] = {2, 2};
         winningCombinations[2] = {3, 1};
-        if (board[2][0] == "X" || board[2][0] == "X̶")
+        if (board[2][0] == PieceToString(X) || board[2][0] == PieceToString(X_WIN))
             winner = PLAYER1;
         else {
             winner = PLAYER2;
@@ -354,7 +377,7 @@ Game::Winner Game::getWinner(std::array<std::array<std::string, 3>, 3>& board) {
     if (winner != PLAYER1 && winner != PLAYER2) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                if (board[i][j] == " ") {
+                if (board[i][j] == PieceToString(EMPTY)) {
                     winner = INCOMPLETE;
                 }
             }
@@ -362,11 +385,11 @@ Game::Winner Game::getWinner(std::array<std::array<std::string, 3>, 3>& board) {
     }
 
     if (winner != INCOMPLETE && winner != DRAW) {
-        std::string replacement = " ";
+        std::string replacement = PieceToString(EMPTY);
         if (winner == PLAYER1) {
-            replacement = "X̶";
+            replacement = PieceToString(X_WIN);
         } else {
-            replacement = "O̶";
+            replacement = PieceToString(O_WIN);
         }
         // Set winning combinations to have a dash
         for (int x = 1; x <= 3; x++) {
