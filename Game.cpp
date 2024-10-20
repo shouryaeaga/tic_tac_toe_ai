@@ -181,6 +181,55 @@ Game::Turn Game::makeComputerTurn(const bool maximisingPlayer1) {
     return std::get<Turn>(result);
 }
 
+Game::ComputerResult Game::resultReturn(bool maximisingPlayer1, const std::vector<Winner> &evals, const std::vector<Turn>& turns, bool firstRecursion) {
+    // Return the drawing position or winning position if there is no drawing position.
+    int wins = 0;
+    int draws = 0;
+    int losses = 0;
+
+    // Make a vector of winning moves and drawing moves and losing moves
+    std::vector<Turn> winningTurns;
+    std::vector<Turn> drawingTurns;
+    std::vector<Turn> losingTurns;
+
+    Winner losing = maximisingPlayer1 ? PLAYER2 : PLAYER1;
+    Winner winning = maximisingPlayer1 ? PLAYER1 : PLAYER2;
+
+    for (int i = 0; i < evals.size(); i++) {
+        if (evals[i] == winning) {
+            wins += 1;
+            winningTurns.push_back(turns[i]);
+        } else if (evals[i] == DRAW) {
+            draws += 1;
+            drawingTurns.push_back(turns[i]);
+        } else if (evals[i] == losing) {
+            losses += 1;
+            losingTurns.push_back(turns[i]);
+        }
+    }
+    if (wins > 0) {
+        if (firstRecursion) {
+            unsigned int middle = winningTurns.size() / 2;
+            return winningTurns[middle];
+        }
+        return winning;
+    }
+    if (draws > 0) {
+        if (firstRecursion) {
+            unsigned int middle = drawingTurns.size() / 2;
+            return drawingTurns[middle];
+        }
+        return DRAW;
+    }
+    if (losses > 0) {
+        if (firstRecursion) {
+            unsigned int middle = losingTurns.size() / 2;
+            return losingTurns[middle];
+        }
+        return losing;
+    }
+}
+
 Game::ComputerResult Game::makeComputerTurnHelper(std::array<std::array<std::string, 3>, 3> board, bool maximisingPlayer1, bool firstRecursion) {
     // If depth is 0, or game is over, return the evaluation of position
     if (getWinner(board) != INCOMPLETE) {
@@ -216,90 +265,7 @@ Game::ComputerResult Game::makeComputerTurnHelper(std::array<std::array<std::str
         turns.push_back(nextTurn);
     }
 
-    // Return the best eval for the maximising player
-    if (maximisingPlayer1) {
-        // Return the drawing position or winning position if there is no drawing position.
-        int wins = 0;
-        int draws = 0;
-        int losses = 0;
-
-        // Make a vector of winning moves and drawing moves and losing moves
-        std::vector<Turn> winningTurns;
-        std::vector<Turn> drawingTurns;
-        std::vector<Turn> losingTurns;
-
-        for (int i = 0; i < evals.size(); i++) {
-            if (evals[i] == PLAYER1) {
-                wins += 1;
-                winningTurns.push_back(turns[i]);
-            } else if (evals[i] == DRAW) {
-                draws += 1;
-                drawingTurns.push_back(turns[i]);
-            } else if (evals[i] == PLAYER2) {
-                losses += 1;
-                losingTurns.push_back(turns[i]);
-            }
-        }
-        if (wins > 0) {
-            if (firstRecursion) {
-                return winningTurns[0];
-            }
-            return PLAYER1;
-        }
-        if (draws > 0) {
-            if (firstRecursion) {
-                return drawingTurns[0];
-            }
-            return DRAW;
-        }
-        if (losses > 0) {
-            if (firstRecursion) {
-                return losingTurns[0];
-            }
-            return PLAYER2;
-        }
-    } else {
-        // Return the drawing position or winning position if there is no drawing position.
-        int wins = 0;
-        int draws = 0;
-        int losses = 0;
-
-        // Make a vector of winning moves and drawing moves and losing moves
-        std::vector<Turn> winningTurns;
-        std::vector<Turn> drawingTurns;
-        std::vector<Turn> losingTurns;
-
-        for (int i = 0; i < evals.size(); i++) {
-            if (evals[i] == PLAYER2) {
-                wins += 1;
-                winningTurns.push_back(turns[i]);
-            } else if (evals[i] == DRAW) {
-                draws += 1;
-                drawingTurns.push_back(turns[i]);
-            } else if (evals[i] == PLAYER1) {
-                losses += 1;
-                losingTurns.push_back(turns[i]);
-            }
-        }
-        if (wins > 0) {
-            if (firstRecursion) {
-                return winningTurns[0];
-            }
-            return PLAYER2;
-        }
-        if (draws > 0) {
-            if (firstRecursion) {
-                return drawingTurns[0];
-            }
-            return DRAW;
-        }
-        if (losses > 0) {
-            if (firstRecursion) {
-                return losingTurns[0];
-            }
-            return PLAYER1;
-        }
-    }
+    return resultReturn(maximisingPlayer1, evals, turns, firstRecursion);
 }
 
 bool Game::updateBoard(Turn move, std::array<std::array<std::string,3>,3>& board) {

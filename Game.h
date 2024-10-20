@@ -6,6 +6,7 @@
 #include <array>
 #include <string>
 #include <variant>
+#include <vector>
 
 class Game {
 public:
@@ -72,6 +73,8 @@ private:
     Turn getPlayerTurn();
     void printBoard();
     Turn makeComputerTurn(bool maximisingPlayer1);
+
+    ComputerResult resultReturn(bool maximisingPlayer1, const std::vector<Winner> &evals, const std::vector<Turn> &turns, bool firstRecursion);
 
     ComputerResult makeComputerTurnHelper(std::array<std::array<std::string, 3>, 3> board, bool maximisingPlayer1, bool firstRecursion);
 
